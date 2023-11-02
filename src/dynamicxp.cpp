@@ -5,6 +5,8 @@ Module Created by Micrah/Milestorme
 Original Script from AshmaneCore https://github.com/conan513 Single Player Project 
 */
 
+#include <ranges>
+
 #include "Configuration/Config.h"
 #include "ScriptMgr.h"
 #include "Player.h"
@@ -14,37 +16,123 @@ Original Script from AshmaneCore https://github.com/conan513 Single Player Proje
 class spp_dynamic_xp_rate : public PlayerScript
 {
 public:
-    spp_dynamic_xp_rate() : PlayerScript("spp_dynamic_xp_rate") { };
+    spp_dynamic_xp_rate() : PlayerScript("spp_dynamic_xp_rate") { }
+
+    std::unordered_map<ObjectGuid, uint8_t> playerLevelCache;
+
+    uint8_t GetPlayerLevel(const ObjectGuid& guid)
+    {
+        // Player is online, update cahce
+        if (const Player* player = ObjectAccessor::FindPlayer(guid))
+        {
+            playerLevelCache[guid] = player->GetLevel();
+            return player->GetLevel();
+        }
+
+        // Player isn't online, is in cache?
+
+        const auto found = playerLevelCache.find(guid);
+        if (found != playerLevelCache.end())
+            return found->second;
+
+        // Load player from DB
+        QueryResult result = CharacterDatabase.Query("SELECT level FROM characters WHERE guid = '{}'", guid.GetCounter());
+
+        if (!result)
+            return 255;
+
+        if (result->GetRowCount() == 0)
+            return 255;
+
+        const auto level = result->Fetch()->Get<uint32>();
+        playerLevelCache[guid] = level;
+
+        return level;
+    }
+
+    uint8_t GetMinLevel(Player* player)
+    {
+        if (const auto group = player->GetGroup())
+        {
+            auto playerView = group->GetMemberSlots()
+            | std::views::transform([this](const Group::MemberSlot& slot)
+            {
+                return GetPlayerLevel(slot.guid);
+            });
+
+            const auto lowestPlayer = std::ranges::min(playerView, std::less());
+
+            return lowestPlayer;
+        }
+
+        return 255u; // max level
+    }
+
+    float GetXPFactor(Player* player)
+    {
+        if (!player->GetGroup()) // Only limiting relative to group
+            return 1.f;
+
+        const auto minLevel = GetMinLevel(player);
+
+        const int16_t levelDelta = static_cast<int16_t>(player->GetLevel()) - minLevel;
+        if (levelDelta <= 1) // Less than 2 levels difference
+            return 1.f;
+
+        switch (levelDelta)
+        {
+        case 2: return 0.8f;
+        case 3: return 0.7f;
+        case 4: return 0.6f;
+        case 5: return 0.5f;
+        case 6: return 0.4f;
+        default: break;
+        }
+
+        return 0.1f;
+    }
+
+    void OnLevelChanged(Player* player, uint8 /*oldlevel*/) override
+    {
+        playerLevelCache[player->GetGUID()] = player->GetLevel();
+    }
 
     void OnLogin(Player* player) override
     {
-        if (sConfigMgr->GetOption<bool>("Dynamic.XP.Rate.Announce", true))
-        {
-            ChatHandler(player->GetSession()).SendSysMessage("This server is running the |cff4CFF00Level Dynamic XP |rmodule.");
-        }
+        //if (sConfigMgr->GetOption<bool>("Dynamic.XP.Rate.Announce", true))
+        //{
+        //    ChatHandler(player->GetSession()).SendSysMessage("This server is running the |cff4CFF00Level Dynamic XP |rmodule.");
+        //}
+        auto message = std::format("|cffFF0000Dynamic XP |ris active, the lowest level in your group is {}, you are getting XP factor {}", GetMinLevel(player), GetXPFactor(player));
+        ChatHandler(player->GetSession()).SendSysMessage(message);
+
     }
 
     void OnGivePlayerXP(Player* player, uint32& amount, Unit* /*victim*/)
     {
-        if (sConfigMgr->GetOption<bool>("Dynamic.XP.Rate", true))
-        {
-            if (player->getLevel() <= 9)
-                amount *= sConfigMgr->GetOption<uint32>("Dynamic.XP.Rate.1-9", 1);
-            else if (player->getLevel() <= 19)
-                amount *= sConfigMgr->GetOption<uint32>("Dynamic.XP.Rate.10-19", 2);
-            else if (player->getLevel() <= 29)
-                amount *= sConfigMgr->GetOption<uint32>("Dynamic.XP.Rate.20-29", 3);
-            else if (player->getLevel() <= 39)
-                amount *= sConfigMgr->GetOption<uint32>("Dynamic.XP.Rate.30-39", 4);
-            else if (player->getLevel() <= 49)
-                amount *= sConfigMgr->GetOption<uint32>("Dynamic.XP.Rate.40-49", 5);
-            else if (player->getLevel() <= 59)
-                amount *= sConfigMgr->GetOption<uint32>("Dynamic.XP.Rate.50-59", 6);
-            else if (player->getLevel() <= 69)
-                amount *= sConfigMgr->GetOption<uint32>("Dynamic.XP.Rate.60-69", 7);
-            else if (player->getLevel() <= 79)
-                amount *= sConfigMgr->GetOption<uint32>("Dynamic.XP.Rate.70-79", 8);
-        }
+        // Based on group
+
+        amount = amount * GetXPFactor(player);
+
+        //if (sConfigMgr->GetOption<bool>("Dynamic.XP.Rate", true))
+        //{
+        //    if (player->getLevel() <= 9)
+        //        amount *= sConfigMgr->GetOption<uint32>("Dynamic.XP.Rate.1-9", 1);
+        //    else if (player->getLevel() <= 19)
+        //        amount *= sConfigMgr->GetOption<uint32>("Dynamic.XP.Rate.10-19", 2);
+        //    else if (player->getLevel() <= 29)
+        //        amount *= sConfigMgr->GetOption<uint32>("Dynamic.XP.Rate.20-29", 3);
+        //    else if (player->getLevel() <= 39)
+        //        amount *= sConfigMgr->GetOption<uint32>("Dynamic.XP.Rate.30-39", 4);
+        //    else if (player->getLevel() <= 49)
+        //        amount *= sConfigMgr->GetOption<uint32>("Dynamic.XP.Rate.40-49", 5);
+        //    else if (player->getLevel() <= 59)
+        //        amount *= sConfigMgr->GetOption<uint32>("Dynamic.XP.Rate.50-59", 6);
+        //    else if (player->getLevel() <= 69)
+        //        amount *= sConfigMgr->GetOption<uint32>("Dynamic.XP.Rate.60-69", 7);
+        //    else if (player->getLevel() <= 79)
+        //        amount *= sConfigMgr->GetOption<uint32>("Dynamic.XP.Rate.70-79", 8);
+        //}
     }
 };
 
