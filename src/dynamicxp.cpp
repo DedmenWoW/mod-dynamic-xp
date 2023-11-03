@@ -67,7 +67,7 @@ public:
             //        return GetPlayerLevel(slot.guid);
             //    });
 
-            const auto lowestPlayer = std::ranges::min(playerLevels, std::less());
+            const auto lowestPlayer = *std::min_element(playerLevels.begin(), playerLevels.end(), std::less());
 
             return lowestPlayer;
         }
