@@ -116,8 +116,10 @@ public:
 
     }
 
-    void OnGivePlayerXP(Player* player, uint32& amount, Unit* /*victim*/)
+    void OnGiveXP(Player* player, uint32& amount, Unit* /*victim*/, uint8 xpSource) override
     {
+        auto source = static_cast<PlayerXPSource>(xpSource);
+
         // Based on group
 
         amount = amount * GetXPFactor(player);
