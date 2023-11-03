@@ -54,13 +54,20 @@ public:
     {
         if (const auto group = player->GetGroup())
         {
-            auto playerView = group->GetMemberSlots()
-            | std::views::transform([this](const Group::MemberSlot& slot)
-            {
-                return GetPlayerLevel(slot.guid);
-            });
+            std::vector<uint8> playerLevels;
+            std::transform(group->GetMemberSlots().begin(), group->GetMemberSlots().end(), std::back_inserter(playerLevels), [this](const Group::MemberSlot& slot)
+                {
+                    return GetPlayerLevel(slot.guid);
+                });
 
-            const auto lowestPlayer = std::ranges::min(playerView, std::less());
+            // Clang 13 cannot do this
+            //auto playerView = group->GetMemberSlots()
+            //| std::views::transform([this](const Group::MemberSlot& slot)
+            //    {
+            //        return GetPlayerLevel(slot.guid);
+            //    });
+
+            const auto lowestPlayer = std::ranges::min(playerLevels, std::less());
 
             return lowestPlayer;
         }
