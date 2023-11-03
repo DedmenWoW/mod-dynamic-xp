@@ -111,7 +111,7 @@ public:
         //{
         //    ChatHandler(player->GetSession()).SendSysMessage("This server is running the |cff4CFF00Level Dynamic XP |rmodule.");
         //}
-        auto message = std::format("|cffFF0000Dynamic XP |ris active, the lowest level in your group is {}, you are getting XP factor {}", GetMinLevel(player), GetXPFactor(player));
+        auto message = fmt::format("|cffFF0000Dynamic XP |ris active, the lowest level in your group is {}, you are getting XP factor {}", GetMinLevel(player), GetXPFactor(player));
         ChatHandler(player->GetSession()).SendSysMessage(message);
 
     }
