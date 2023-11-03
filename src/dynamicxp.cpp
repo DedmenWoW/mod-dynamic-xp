@@ -6,6 +6,7 @@ Original Script from AshmaneCore https://github.com/conan513 Single Player Proje
 */
 
 #include <ranges>
+#include <format>
 
 #include "Configuration/Config.h"
 #include "ScriptMgr.h"
