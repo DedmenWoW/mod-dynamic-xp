@@ -103,6 +103,7 @@ public:
     void OnLevelChanged(Player* player, uint8 /*oldlevel*/) override
     {
         playerLevelCache[player->GetGUID()] = player->GetLevel();
+        player->CastSpell(player, 11541, true); // Fireworks!
     }
 
     void OnLogin(Player* player) override
