@@ -20,6 +20,8 @@ public:
     spp_dynamic_xp_rate() : PlayerScript("spp_dynamic_xp_rate") { }
 
     std::unordered_map<ObjectGuid, uint8_t> playerLevelCache;
+    // Hardcoded special group even if player is not inside any group currently
+    static constexpr std::array<ObjectGuid, 5> groupList = { ObjectGuid(uint64(2)), ObjectGuid(uint64(4)), ObjectGuid(uint64(5)), ObjectGuid(uint64(6)), ObjectGuid(uint64(7)) };
 
     uint8_t GetPlayerLevel(const ObjectGuid& guid)
     {
@@ -67,6 +69,18 @@ public:
             //    {
             //        return GetPlayerLevel(slot.guid);
             //    });
+
+            const auto lowestPlayer = *std::min_element(playerLevels.begin(), playerLevels.end(), std::less());
+
+            return lowestPlayer;
+        }
+        else if (std::find(groupList.begin(), groupList.end(), player->GetGUID()) != groupList.end())
+        {
+            std::vector<uint8> playerLevels;
+            std::transform(groupList.begin(), groupList.end(), std::back_inserter(playerLevels), [this](const ObjectGuid& guid)
+                {
+                    return GetPlayerLevel(guid);
+                });
 
             const auto lowestPlayer = *std::min_element(playerLevels.begin(), playerLevels.end(), std::less());
 
