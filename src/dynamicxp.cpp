@@ -55,6 +55,19 @@ public:
 
     uint8_t GetMinLevel(Player* player)
     {
+        if (std::find(groupList.begin(), groupList.end(), player->GetGUID()) != groupList.end())
+        {
+            std::vector<uint8> playerLevels;
+            std::transform(groupList.begin(), groupList.end(), std::back_inserter(playerLevels), [this](const ObjectGuid& guid)
+                {
+                    return GetPlayerLevel(guid);
+                });
+
+            const auto lowestPlayer = *std::min_element(playerLevels.begin(), playerLevels.end(), std::less());
+
+            return lowestPlayer;
+        }
+
         if (const auto group = player->GetGroup())
         {
             std::vector<uint8> playerLevels;
@@ -69,18 +82,6 @@ public:
             //    {
             //        return GetPlayerLevel(slot.guid);
             //    });
-
-            const auto lowestPlayer = *std::min_element(playerLevels.begin(), playerLevels.end(), std::less());
-
-            return lowestPlayer;
-        }
-        else if (std::find(groupList.begin(), groupList.end(), player->GetGUID()) != groupList.end())
-        {
-            std::vector<uint8> playerLevels;
-            std::transform(groupList.begin(), groupList.end(), std::back_inserter(playerLevels), [this](const ObjectGuid& guid)
-                {
-                    return GetPlayerLevel(guid);
-                });
 
             const auto lowestPlayer = *std::min_element(playerLevels.begin(), playerLevels.end(), std::less());
 
