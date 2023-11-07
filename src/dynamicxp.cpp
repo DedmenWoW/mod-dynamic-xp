@@ -93,10 +93,9 @@ public:
 
     float GetXPFactor(Player* player)
     {
-        if (!player->GetGroup()) // Only limiting relative to group
-            return 1.f;
-
         const auto minLevel = GetMinLevel(player);
+        if (minLevel == 255u)
+            return 1.f; // no group detected
 
         const int16_t levelDelta = static_cast<int16_t>(player->GetLevel()) - minLevel;
         if (levelDelta <= 1) // Less than 2 levels difference
