@@ -138,6 +138,8 @@ public:
         // Based on group
 
         amount = amount * GetXPFactor(player);
+        if (player->getLevel() <= 39)
+            amount = amount * 3;
 
         //if (sConfigMgr->GetOption<bool>("Dynamic.XP.Rate", true))
         //{
