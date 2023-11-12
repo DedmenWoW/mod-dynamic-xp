@@ -23,6 +23,10 @@ public:
     // Hardcoded special group even if player is not inside any group currently
     static constexpr std::array<ObjectGuid, 5> groupList = { ObjectGuid(uint64(2)), ObjectGuid(uint64(4)), ObjectGuid(uint64(5)), ObjectGuid(uint64(6)), ObjectGuid(uint64(7)) };
 
+    // Account IDs that get 3x XP up till lvl 40
+    static constexpr std::array<uint32, 5> character40xpWhitelist = { 2, 4, 7 };
+
+
     uint8_t GetPlayerLevel(const ObjectGuid& guid)
     {
         // Player is online, update cahce
@@ -93,13 +97,25 @@ public:
 
     float GetXPFactor(Player* player)
     {
+        auto GetDefaultFactor = [player]() -> float
+            {
+                const uint32 accountId = sCharacterCache->GetCharacterAccountIdByGuid(player->GetGUID());
+                if (std::find(character40xpWhitelist.begin(), character40xpWhitelist.end(), accountId) != character40xpWhitelist.end())
+                {
+                    if (player->getLevel() <= 39)
+                        return 3.f;
+                }
+
+                return 1.f;
+            };
+
         const auto minLevel = GetMinLevel(player);
         if (minLevel == 255u)
-            return 1.f; // no group detected
+            return GetDefaultFactor(); // no group detected
 
         const int16_t levelDelta = static_cast<int16_t>(player->GetLevel()) - minLevel;
         if (levelDelta <= 1) // Less than 2 levels difference
-            return 1.f;
+            return GetDefaultFactor();
 
         switch (levelDelta)
         {
@@ -138,8 +154,6 @@ public:
         // Based on group
 
         amount = amount * GetXPFactor(player);
-        if (player->getLevel() <= 39)
-            amount = amount * 3;
 
         //if (sConfigMgr->GetOption<bool>("Dynamic.XP.Rate", true))
         //{
