@@ -102,7 +102,7 @@ public:
                 const uint32 accountId = sCharacterCache->GetCharacterAccountIdByGuid(player->GetGUID());
                 if (std::find(character40xpWhitelist.begin(), character40xpWhitelist.end(), accountId) != character40xpWhitelist.end())
                 {
-                    if (player->getLevel() <= 39)
+                    if (player->getLevel() <= 49)
                         return 3.f;
                 }
 
