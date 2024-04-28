@@ -13,6 +13,7 @@ Original Script from AshmaneCore https://github.com/conan513 Single Player Proje
 #include "Player.h"
 #include "Chat.h"
 
+static bool tripleXPEnabled = true;
 
 class spp_dynamic_xp_rate : public PlayerScript
 {
@@ -25,7 +26,6 @@ public:
 
     // Account IDs that get 3x XP up till lvl 40
     static constexpr std::array<uint32, 5> character40xpWhitelist = { 2, 4, 7 };
-
 
     uint8_t GetPlayerLevel(const ObjectGuid& guid)
     {
@@ -59,6 +59,7 @@ public:
 
     uint8_t GetMinLevel(Player* player)
     {
+        // Hardcoded group that applies even if player is not in group (Still limit progress between players, even if they left the group)
         if (std::find(groupList.begin(), groupList.end(), player->GetGUID()) != groupList.end())
         {
             std::vector<uint8> playerLevels;
@@ -72,6 +73,7 @@ public:
             return lowestPlayer;
         }
 
+        // Limit to other members in players group
         if (const auto group = player->GetGroup())
         {
             std::vector<uint8> playerLevels;
@@ -99,11 +101,15 @@ public:
     {
         auto GetDefaultFactor = [player]() -> float
             {
-                const uint32 accountId = sCharacterCache->GetCharacterAccountIdByGuid(player->GetGUID());
-                if (std::find(character40xpWhitelist.begin(), character40xpWhitelist.end(), accountId) != character40xpWhitelist.end())
+                if (tripleXPEnabled)
                 {
-                    if (player->getLevel() <= 49)
-                        return 3.f;
+                    const uint32 accountId = sCharacterCache->GetCharacterAccountIdByGuid(player->GetGUID());
+                    // Hardcoded whitelist of accounts that get 3x XP by default
+                    if (std::find(character40xpWhitelist.begin(), character40xpWhitelist.end(), accountId) != character40xpWhitelist.end())
+                    {
+                        if (player->getLevel() <= 49)
+                            return 3.f;
+                    }
                 }
 
                 return 1.f;
@@ -177,7 +183,55 @@ public:
     }
 };
 
+spp_dynamic_xp_rate* GXPRate;
+using namespace Acore::ChatCommands;
+
+
+class DynXPCommand : public CommandScript
+{
+public:
+    DynXPCommand() : CommandScript("DynXPCommand") {}
+
+    ChatCommandTable GetCommands() const override
+    {
+        static ChatCommandTable DynXPCommandTable =
+        {
+            {"check3xp", HandleCheck3XPCommand, SEC_PLAYER, Console::Yes},
+            {"toggle3xp", HandleToggle3XPCommand, SEC_PLAYER, Console::Yes},
+        };
+
+        static ChatCommandTable DynXPCommandBaseTable =
+        {
+            {"dynxp", DynXPCommandTable}
+        };
+
+        return DynXPCommandBaseTable;
+    }
+
+    static uint32 GetGuildPhase(Player* player)
+    {
+        return player->GetGuildId() + 10;
+    }
+
+    static bool HandleCheck3XPCommand(ChatHandler* handler)
+    {
+        Player* player = handler->GetSession()->GetPlayer();
+
+        auto message = fmt::format("|cffFF0000Dynamic XP |ris active, 3xp is currently {}, you are getting XP factor {}", tripleXPEnabled, GXPRate->GetXPFactor(player));
+        handler->SendSysMessage(message);
+        return true;
+    }
+
+    static bool HandleToggle3XPCommand(ChatHandler* handler)
+    {
+        tripleXPEnabled = !tripleXPEnabled;
+        HandleCheck3XPCommand(handler);
+        return true;
+    }
+};
+
 void AddSC_dynamic_xp_rate()
 {
-    new spp_dynamic_xp_rate();
+    GXPRate = new spp_dynamic_xp_rate();
+    new DynXPCommand();
 }
