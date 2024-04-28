@@ -2,7 +2,7 @@
 Credits
 Script reworked by Micrah/Milestorme and Poszer (Poszer is the Best)
 Module Created by Micrah/Milestorme
-Original Script from AshmaneCore https://github.com/conan513 Single Player Project 
+Original Script from AshmaneCore https://github.com/conan513 Single Player Project
 */
 
 #include <ranges>
